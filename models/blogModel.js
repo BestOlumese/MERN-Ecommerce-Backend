@@ -42,7 +42,7 @@ var blogSchema = new mongoose.Schema({
         type: String,
         default: "Admin",
     },
-}
+},
 {
     toJSON: {
         virtuals: true,
