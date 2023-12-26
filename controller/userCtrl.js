@@ -20,6 +20,8 @@ const createUser = asyncHandler(async (req, res) => {
     }
 })
 
+// Login a User
+
 const loginUserCtrl = asyncHandler(async (req, res) => {
     const {email,password} = req.body
     const findUser = await User.findOne({ email })
@@ -39,6 +41,34 @@ const loginUserCtrl = asyncHandler(async (req, res) => {
             email: findUser?.email,
             mobile: findUser?.mobile,
             token: generateToken(findUser?._id),
+        })
+    } else {
+        throw new Error("Invalid Credentials")
+    }
+})
+
+// Admin login
+
+const loginAdmin = asyncHandler(async (req, res) => {
+    const {email,password} = req.body
+    const findAdmin = await User.findOne({ email })
+    if(findAdmin.role !== 'admin') throw new Error('Not Authorized')
+    if(findAdmin && await findAdmin.isPasswordMatched(password)) {
+        const refreshToken = await generateRefreshToken(findAdmin?._id)
+        const updateuser = await User.findByIdAndUpdate(findAdmin.id, {
+            refreshToken: refreshToken,
+        }, { new:true })
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            maxAge: 72 * 60 * 60 * 1000,
+        })
+        res.json({
+            _id: findAdmin?._id,
+            firstname: findAdmin?.firstname,
+            lastname: findAdmin?.lastname,
+            email: findAdmin?.email,
+            mobile: findAdmin?.mobile,
+            token: generateToken(findAdmin?._id),
         })
     } else {
         throw new Error("Invalid Credentials")
@@ -87,10 +117,29 @@ const logout = asyncHandler(async (req, res) => {
     return res.sendStatus(204) // forbidden
 })
 
+// save user address
+const saveAddress = asyncHandler(async (req, res) => {
+    const { _id } = req.user
+    validateMongodbid(_id)
+    try {
+        const updatedUser = await User.findByIdAndUpdate(
+            _id, 
+            {
+                address: req?.body?.address,
+            }, 
+            { 
+                new: true,
+            })
+        res.json(updatedUser)
+    } catch (error) {
+        throw new Error(error)
+    }
+})
+
 // get all users
 const getAllUsers = asyncHandler(async (req,res) => {
     try {
-        const getUsers = await User.find()
+        const getUsers = await User.find().populate("wishlist")
         res.json(getUsers)
     } catch (error) {
         throw Error(error)
@@ -239,6 +288,16 @@ const resetPassword = asyncHandler(async (req, res) => {
     res.json(user)
 })
 
+const getWishlist = asyncHandler(async (req, res) => {
+    const { _id } = req.user
+    try {
+        const findUser = await User.findById(_id).populate("wishlist")
+        res.json(findUser)
+    } catch (error) {
+        throw new Error(error)
+    }
+})
+
 module.exports = {
     createUser,
     loginUserCtrl,
@@ -253,4 +312,7 @@ module.exports = {
     updatePassword,
     forgotPasswordToken,
     resetPassword,
+    loginAdmin,
+    getWishlist,
+    saveAddress,
 }
