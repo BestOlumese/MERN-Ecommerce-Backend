@@ -9,7 +9,7 @@ router.put('/upload/:id',
         authMiddleware, 
         isAdmin, 
         uploadPhoto.array('images',2),
-        blogImgResize,
+        productImgResize,
         uploadImages)
 router.get('/:id', getaProduct)
 router.put('/wishlist', authMiddleware, addToWishlist)
